@@ -11,7 +11,7 @@ t.hideturtle()
 t.tracer(0)
 pen = t.Turtle()
 
-# defining functions: 
+# defining functions (NOTE: all function colour parameters should be in hexadecimal in with format "#XXXXXX" (where the Xs are the rgb values)):
 
 def dec_to_hex(decimal):
     return f"{round(decimal):02X}" # X converts to hex, 02 makes sure it has 2 characters (with leading 0/s if necessary)
@@ -20,6 +20,9 @@ def hex_to_dec(hexadecimal):
     return int(hexadecimal, 16)
 
 def get_brightness(colour):
+    """Returns a value in range [0, 1] (including both end points) which represents the apparent brightness of the given.
+    \nUses the formula 'b = ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255' because those coefficients of r, g, and b represent approximately how much human eyes weight the brightness of each colour (at least according to this paper: https://library.imaging.org/admin/apis/public/api/ist/website/downloadArticle/tdpf/1/1/art00005).
+    """
     # parameter handling (convert all values to decimals):
     if isinstance(colour, str) and colour[0] == '#' and len(colour) == 7:
         r = hex_to_dec(colour[1:3])
@@ -28,9 +31,10 @@ def get_brightness(colour):
     else:
         raise ValueError("Input colour must be a string starting with '#' and must be in hexadecimal with 6 digits")
     
-    return ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255 # brightness is weighted by how sensitive human eyes are to red, green, and blue
+    return ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255 # brightness is weighted by how sensitive human eyes are to red, green, and blue on average
 
 def get_contrast_colour(colour, threshold_brightness=0.5):
+    """Returns either black or white (in hexadecimal) depending on how bright the input colour is."""
     brightness = get_brightness(colour)
 
     if brightness > threshold_brightness:
@@ -39,6 +43,7 @@ def get_contrast_colour(colour, threshold_brightness=0.5):
         return "#FFFFFF"
 
 def adjust_brightness(colour, brightness):
+    """Returns an adjusted version of the input colour with the given brightness."""
     if brightness < 0:
         raise ValueError("brightness must be >= 0")
 
@@ -71,12 +76,17 @@ def adjust_brightness(colour, brightness):
 
     return f"#{r}{g}{b}"
 
-def sync_brightness(base_colour, alt_colour):
-    """Returns alt_colour with its brightness equal to base_colour's brightness."""
-    base_brightness = get_brightness(base_colour)
+def sync_brightness(source_colour, alt_colour):
+    """Returns an adjusted version of alt_colour with its brightness equal to source_colour's brightness."""
+    base_brightness = get_brightness(source_colour)
     return adjust_brightness(alt_colour, base_brightness)
 
-def make_colour_palette(colour, maintain_brightness=False) -> list:
+def make_colour_palette(colour, maintain_brightness=True) -> list:
+    """
+    Returns a list of six colours (including the input colour) with similar appearances.
+    \n Parameter/s:
+    - maintain_brightness: if True, all colours will have the same apparent brightness level (as decided by adjust_brightness); if False, they won't necessarily.
+    """
     # parameter handling (convert all values to hex strings):
     if isinstance(colour, str) and colour[0] == '#' and len(colour) == 7:
         r = colour[1:3].upper()
@@ -107,7 +117,12 @@ def make_colour_palette(colour, maintain_brightness=False) -> list:
             
     return colours
 
-def draw_screen_height_rectangles(turtle, colours):
+def draw_screen_height_rectangles(turtle, colours, show_text=True, text_size=screen_height//50):
+    """
+    Fills the screen with vertical rectangles, side by side, with a given list of colours. 
+    \n Parameter/s:
+    - show_text: if True, text showing the hex code of each colour will be rendered (in either black or white, depending on the brightness of the colour).
+    """
     num_rectangles = len(colours)
     turtle.penup()
     turtle.goto((-screen_width / 2), screen_height / 2) # top left corner
@@ -123,10 +138,11 @@ def draw_screen_height_rectangles(turtle, colours):
         turtle.goto(-(screen_width / 2) + i * (screen_width / num_rectangles), screen_height / 2) # top left corner
         turtle.end_fill()
 
-        # writing colour hex code in centre:
-        turtle.goto(-(screen_width / 2) + (i + 0.5)* (screen_width / num_rectangles), 0) # centre of rectangle
-        turtle.color(get_contrast_colour(colours[i])) # creating a contrasting text colour to make it almost always visible
-        turtle.write(colours[i], align="center", font=('Arial', screen_height // 50, 'normal'))
+        if show_text == True:
+            # writing colour hex code in centre:
+            turtle.goto(-(screen_width / 2) + (i + 0.5)* (screen_width / num_rectangles), 0) # centre of rectangle
+            turtle.color(get_contrast_colour(colours[i])) # creating a contrasting text colour to make it almost always visible
+            turtle.write(colours[i], align="center", font=('Arial', text_size, 'normal'))
 
         # moving to next rectangle starting point:
         turtle.penup()
@@ -134,6 +150,7 @@ def draw_screen_height_rectangles(turtle, colours):
         turtle.pendown()
 
 def random_colour():
+    """Returns a random colour in hexadecimal."""
     r = randint(0, 255)
     g = randint(0, 255)
     b = randint(0, 255)
@@ -141,8 +158,15 @@ def random_colour():
 
 # drawing:
 
-colours = make_colour_palette(random_colour(), True)
+colour = random_colour() # input("Colour: ")
+colours = make_colour_palette(colour, False)
 
 draw_screen_height_rectangles(pen, colours)
+
+# printing results:
+print(f"Source colour: {colour}")
+print(f"Companion colours: ", end='')
+[print(x + ', ', end='') for x in colours[1:-1]] # looks nicer than just printing the list
+print(colours[-1])
 
 t.done() # keeps window open
